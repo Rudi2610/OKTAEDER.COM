@@ -1,0 +1,120 @@
+===============================================================================
+                          O K T A E D E R . C O M
+===============================================================================
+
+  Type...........: 256-byte MS-DOS Intro
+  Author.........: Rudi / DKE (rudi.stranden@gmail.com)
+  Platform.......: DOSBox-X (Emulated 3dfx Voodoo 1)
+  Release Date...: 20/06/2026
+  Party..........: ROMA.EXE
+
+===============================================================================
+
+ [ THE LEGACY ]
+
+ Remember the mid-to-late 90s? The era when 3D graphics meant chunky 
+ pixels and software rendering struggling on a Pentium? Then the 3dfx 
+ Voodoo Graphics accelerator dropped in August 1996 and completely 
+ changed the world. Suddenly, we had perspective-corrected texture 
+ mapping, bilinear and trilinear filtering, polygonal-based Gouraud 
+ shading, alpha blending, hardware depth-buffering, and high precision 
+ sub-pixel correction. 
+ 
+ If you were there, you remember booting into DOS to play those legendary 
+ Glide-patched games. We traded chunky pixels for high-res roadkill in 
+ Carmageddon, the Screamer series went blistering fast, and GLQuake blew 
+ our minds with colored lighting and transparent water. This intro is a 
+ tribute to that magical era of bare-metal DOS gaming and the hardware 
+ that started the 3D accelerator revolution.
+
+ [ THE CLAIM ]
+
+ Maybe the very first 256b intro that targets the 3dfx Voodoo 1 card? 
+ If you know anybody else who has done 3dfx in 256 bytes, please let me 
+ know. I will not claim this is the first if it's already been done!
+
+ [ TECHNICAL SPECS ]
+
+ * 32-bit Flat / Unreal Mode entry
+ * Bare-metal 3dfx Voodoo 1 PCI initialization (No Glide drivers!)
+ * 3D CORDIC Rotations (Integer-only bitshifts)
+ * Perfect 90-degree Lathe geometry generation
+ * Lambert or Gouraud shading & Culling via direct face-normal math
+ * Unified back-buffer Swap & Clear
+
+ [ UNDER THE HOOD ]
+
+ This code has been lurking for a year. On and off, size-optimizing the 
+ memory setup and the Voodoo 1 initialization. It was a bitch to hack, 
+ but now it's working. To squeeze this into 256 bytes, standard 
+ conventions were thrown out the window. Here is the black magic:
+
+ 1. The 32-bit PMode / Unreal Mode Hack
+ To access the Voodoo's MMIO and LFB at 0xD0000000, we need 32-bit flat 
+ addressing. Standard Protected Mode setups waste bytes on GDT padding. 
+ Instead, an overlapping 23-byte GDT is dynamically patched at runtime. 
+ Flat 4GB selectors are loaded using a 3-byte stack trick (push 0x20, 
+ pop ds, pop es). PMode is entered in a flash by shifting CS to find the 
+ linear base, executing lgdt, and flipping the PE bit directly in CR0.
+
+ 2. Bare-Metal Voodoo 1 Initialization
+ We completely bypass the glide2x.ovl API. To wake the card, the intro 
+ manually hits the PCI configuration port 0xCF8. A clever 'jpe' loop 
+ toggles the parity from 0x43 to 0xC3, enabling both INITENABLE and FIFO 
+ in just a few bytes. 
+ 
+ Once the PCI space is configured, writing to the FBIINIT0 register 
+ triggers the Voodoo MMIO window. From there, FBZMODE is set to 
+ 0x00004601 (enabling Backbuffer, RGB+Z, and Clipping). Finally, scasd 
+ and stosd instructions quickly step through memory to define the 
+ clipping window constraints with maximum byte efficiency.
+
+ 3. 8-Bit Lathe Geometry & Lambert Culling
+ To squeeze the 3D geometry into the binary, the octahedron is compressed 
+ down to an 8-bit data array. The intro then utilizes a stack-based 
+ 90-degree lathe trick to duplicate and rotate the geometry on the fly, 
+ completely eliminating the need to store the full model.
+ The shading calculates face normals via simple imul instructions, pushing 
+ the resulting delta values to the dRdX register to create a fake Gouraud 
+ gradient across the polygons before hitting TRIANGLECMD.
+
+ [ COMPATIBILITY ]
+
+ I can't promise this will work on a real machine or any emulator other 
+ than DOSbox-X. It probably won't. It's a bit tricky to get hold on a 
+ working Voodoo 1 card these days.
+
+ [ GREETINGS ]
+
+ HellMood, Ilmenit, Response, Rrrola, Neon, Baudsurfer, tFt, Phobium
+ Introspec, K-Man, TomCat, frag and the rest.
+
+ Also shoutout to René Rebe on YouTube:
+ "Finally 3dfx Voodoo triangles"                  : https://youtu.be/ZWaDqY4gqhw
+ "Quite final 3dfx Voodoo low-level code working!": https://youtu.be/2ADQgIEWrx4
+ Seeing his bare-metal Voodoo videos a few years ago inspired me to attempt
+ hacking that 3D card myself.
+
+ [ END NOTES & FUTURE EXPLORATIONS ]
+
+ This 256b intro would never have been done without the original 3dfx 
+ Voodoo card documentation:
+ - http://www.o3one.org/hwdocs/video/voodoo_graphics.pdf
+ - https://www.falconfly.de/3dfx.htm
+ - http://bitsavers.informatik.uni-stuttgart.de/components/3dfx/
+
+ Now that the 3dfx Voodoo 1 is a proven target for 256b sizecoding, there 
+ is plenty of room for future exploration. A major sizecoding dilemma 
+ arises here: the combined Unreal Mode switch and bare-metal Voodoo PCI 
+ initialization devour over a third of the entire 256-byte limit. One 
+ hypothesis is whether writing a pure software triangle rasterizer from 
+ scratch might actually cost fewer bytes than waking up the hardware.
+
+ However, the hardware route provides massive benefits that are impossible 
+ to match in software at this scale. Once the Voodoo is awake, we get 
+ sub-pixel correction to 0.4x0.4 resolution, perspective-corrected texture
+ mapping, and blistering fast resolutions up to 800x600 entirely for free.
+ The hardware does the heavy lifting, leaving the 256b scene to dream up
+ new ways to abuse it.
+
+===============================================================================

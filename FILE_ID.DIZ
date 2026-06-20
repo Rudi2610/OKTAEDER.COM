@@ -1,0 +1,18 @@
+---------------------------------------------
+OKTAEDER.COM - 256b intro by Rudi / DKE
+---------------------------------------------
+World's first 3dfx Voodoo 1 accelerated 256b?
+
+Features: 
+* Bare-metal PCI Voodoo init
+* Unreal Mode / 32-bit Flat
+* CORDIC 3D rotations
+* 8-bit Geometry Lathe
+* Lambert shading & 3D Projection
+
+Shows a rotating 3D octahedron.
+
+Requires: DOSBox-X (hardware untested).
+
+Keep the 256b scene alive!
+---------------------------------------------
