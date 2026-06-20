@@ -8,7 +8,7 @@ Features:
 * Unreal Mode / 32-bit Flat
 * CORDIC 3D rotations
 * 8-bit Geometry Lathe
-* Lambert shading & 3D Projection
+* Gouraud shading & 3D Projection
 
 Shows a rotating 3D octahedron.
 
