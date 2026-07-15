@@ -4,7 +4,7 @@ A 256-byte MS-DOS intro showcasing a rotating 3D octahedron. Released at the ROM
 
 **Author:** Rudi / DKE (rudi.stranden@gmail.com)  
 **Release Date:** 20/06/2026  
-**Assembler:** FASM (Flat Assembler)  
+**Assembler:** FASM (Flat Assembler) & NASM 
 
 ## Technical Features
 
