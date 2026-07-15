@@ -18,7 +18,13 @@ FIFOWB_FBI  equ 0x200000       ; 0001 - only FBI
 FBZMODE     equ 0x110          ; Clip/chroma-key/stipple/W-buf/depth/dither/masks
 ; Read 3dfx documentation for more.
 
-; Assumes EDX have PE=1 and A20 is on.
+; Assumes now that ECX have PE=1 and A20 is on.
+; NOTE: Older code assumed EDX had PE=1.
+; However, DOS initializes DX to the PSP seg addr.
+; Wether this segment is odd or even is basically a coin-flip.
+; Using EDX might stay in Realmode, and in some emulators it successfully enable
+; PMODE purely by luck. The absolute safest method is to use EAX, see bottom
+; of this source file for more info.
 org 0x100
 use16
 null: mov ax, cs
@@ -37,22 +43,29 @@ TRI3D db 0, -10, 0             ; Tri 1 - V0
       ; Define Flat GDT:
 cddsc:dq ((0x0000) or (10011010b shl 40) or (0xf shl 48) or (0xc shl 52)) ; code
 dtdsc:dq ((0xffff) or (10010010b shl 40) or (0xf shl 48) or (0xc shl 52)) ; data
+; cddsc:dq ((0x0000) | (10011010b << 40) | (0xf << 48) | (0xc << 52)) ; code ; NASM
+; dtdsc:dq ((0xffff) | (10010010b << 40) | (0xf << 48) | (0xc << 52)) ; data ; NASM
 setup:; Enter PMODE Flat:
       mov [cddsc + 2], ax      ; patch code descriptor base low
       inc ah
       ; Build 6-byte GDT-pointer on stack:
       push ax                  ; base low
       push ax                  ; limit = AX (>23)
+      ; inc ax                 ; forces bit 0 to 1 (uncomment if EDX/ECX crash)
       mov bx, sp               ; BX points to [Limit, BaseLow, BaseHigh]
       cli
       lgdt [bx]                ; load GDT
-      mov cr0, edx             ; enter P(UNREAL)MODE (EDX PE=1 from DOS)
+      mov cr0, ecx             ; enter P(UNREAL)MODE (PE=1 from DOS)
+                               ; patched! Looks like EDX is not always 1.
+                               ; ECX is safer than EDX. If it still does not work
+                               ; use EAX.
       mov dx, 0xcf8            ; safe in 16-bit
       jmp 0x18:pmode_entry     ; 16-bit far jump
 
 pmode_entry:
 use32 ; Set Flat Segments:
       push 0x20
+      ; push byte 0x20         ; NASM
       pop ds
       push ds                  ; copy DS to ES safely
       pop es
@@ -89,9 +102,11 @@ draw: inc ebx                  ; rotation angle
       push ecx                 ; save inner counter
       mov di, 8
       push -3
+      ; push byte -3           ; NASM
       pop ecx
 .emit_loop:
       push 3
+      ; push byte 3            ; NASM
       pop ebp
 .read_vec:
       cs lodsb
@@ -189,3 +204,21 @@ js .skip_draw                  ; cull backface
       mov cr0, ecx             ; return to realmode
       mov ah, 0x4c             ; terminate to DOS
       int 0x21
+
+; Thanks to Hellmood for NASM compatibility.
+
+; Absolute safest PMODE init alternative:
+;
+; If one still has issues entering unreal PMODE because of the
+; register bit 0 is zero, here is the absolute safest way.
+; It increments AX and moves that into CR0, guaranteeing PE=1,
+; but it will cost one extra byte.
+
+; Replace the 6-byte GDT-pointer in "setup:" like this:
+;      push ax                  ; base low
+;      push ax                  ; limit = AX (>23)
+;      inc ax                   ; forces bit 0 to 1
+;      mov bx, sp               ; BX points to [Limit, BaseLow, BaseHigh]
+;      cli
+;      lgdt [bx]                ; load GDT
+;      mov cr0, eax             ; enter P(UNREAL)MODE (PE=1 from EAX)
