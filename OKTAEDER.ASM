@@ -205,16 +205,17 @@ js .skip_draw                  ; cull backface
       mov ah, 0x4c             ; terminate to DOS
       int 0x21
 
-; Thanks to Hellmood for NASM compatibility and also for helping me figure
-; out why the EDX caused PMODE crash because of LSB bit being zero on some
-; DOS bootups.
+; Thanks to HellMood for the NASM compatibility and for helping debug the
+; PMODE crash. DOS initializes DX to the PSP segment address, so its Least
+; Significant Bit (LSB) is basically a coin flip. Moving EDX into CR0 would
+; sometimes fail to set the PE (Protection Enable) bit, leaving the CPU in 
+; real mode. CX is reliably 0x00FF at DOS startup, making ECX a much safer choice.
 
-; Absolute safest PMODE init alternative:
+; --- Absolute safest PMODE initialization ---
 ;
-; If one still has issues entering unreal PMODE because of the
-; register bit 0 is zero, here is the absolute safest way.
-; It increments AX and moves that into CR0, guaranteeing PE=1,
-; but it will cost one extra byte.
+; If you still encounter issues entering unreal PMODE because register bit 0
+; is zero on a specific emulator/DOS variant, here is the bulletproof way.
+; It increments AX to guarantee PE=1 before moving it to CR0, but costs 1 extra byte.
 
 ; Replace the 6-byte GDT-pointer in "setup:" like this:
 ;      push ax                  ; base low
