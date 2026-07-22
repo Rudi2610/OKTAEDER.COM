@@ -205,7 +205,9 @@ js .skip_draw                  ; cull backface
       mov ah, 0x4c             ; terminate to DOS
       int 0x21
 
-; Thanks to Hellmood for NASM compatibility.
+; Thanks to Hellmood for NASM compatibility and also for helping me figure
+; out why the EDX caused PMODE crash because of LSB bit being zero on some
+; DOS bootups.
 
 ; Absolute safest PMODE init alternative:
 ;
